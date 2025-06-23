@@ -14,7 +14,7 @@ A lightweight physics system with support for velocity, torque, and toggling gra
 **Spring Physics Controller**
 A custom spring class simulates spring-like behavior by tethering objects to a target point, adding a dynamic feel when dragging or releasing them.
 
-**🕹️ Controls**
+## 🕹️ Controls
 Click and hold on an apple to grab it.
 
 Drag the apple away from the tree to detach it.
