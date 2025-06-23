@@ -21,4 +21,4 @@ Drag the apple away from the tree to detach it.
 
 Drop the apple on the goal area to score.
 
-Repeat and enjoy the satisfying motion!
+Repeat.
