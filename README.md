@@ -2,7 +2,7 @@
 
 A Unity scene showcasing a custom 2D physics system with a focus on satisfying game feel through physics-based movement, inverse kinematics, and playful sound effects.
 
-Unity Version: 2022.3.6f1
+Unity Version: 2022.3.62f1
 
 ## ✨ Features
 **Inverse Kinematics Tree Trunk**
