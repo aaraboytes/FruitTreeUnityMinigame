@@ -1439,6 +1439,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1564,6 +1565,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 636ddb23702a0124592d5c69adfe970e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &559953236
 GameObject:
   m_ObjectHideFlags: 0
@@ -2177,7 +2190,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0482e5ec7299fa147a2b1140d4306762, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  apple: {fileID: 0}
   applePrefab: {fileID: 422516142949316851, guid: a446045d002febd43b8d949e33ecd0d7, type: 3}
   treeTop: {fileID: 1266046846}
   spawnLocations:
@@ -2923,9 +2935,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8195dfa2d5bb3d44c95dc0013ae803a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  target: {x: 0, y: 0}
-  damping: 0.9
-  frequency: 20
+  target: {x: 0, y: -0.23999953}
+  damping: 0.8
+  frequency: 400
 --- !u!114 &1266046849
 MonoBehaviour:
   m_ObjectHideFlags: 0

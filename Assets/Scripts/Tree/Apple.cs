@@ -23,17 +23,17 @@ public class Apple : MonoBehaviour
     [SerializeField] private Transform goal;
     [SerializeField] private float goalRadius;
 
-    private float treeResistanceTimer;
     private int previousPitch = 0;
-    private Camera camera;
-    private Vector2 initialPosition;
+    private float maxPullRadius = 1;
+    private Vector2 originPosition;
     private Vector2 lastFramePosition;
     private Animator animator;
+    private AppleFace face;
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(initialPosition, attachRadius);
+        Gizmos.DrawWireSphere(originPosition, attachRadius);
     }
     /// <summary>
     /// When user clics on apple.
@@ -67,6 +67,10 @@ public class Apple : MonoBehaviour
             simpleRigidbody.SetGravity(true);
             spring.enabled = false;
         }
+        else
+        {
+            previousPitch = 0;
+        }
 
         if (Vector2.Distance(transform.position, goal.transform.position) <= goalRadius)
         {
@@ -77,6 +81,7 @@ public class Apple : MonoBehaviour
             }
             enabled = false;
             simpleRigidbody.SetGravity(false);
+            simpleRigidbody.SetVelocity(Vector2.zero); ;
             spring.SetTarget(goal.position);
             DissapearApple();
             AudioManager.instance.PlaySFX(SFXNames.AppleGoal);
@@ -88,57 +93,57 @@ public class Apple : MonoBehaviour
 
         AppleReleasedEvent?.Invoke(this);
     }
+    private void Awake()
+    {
+        face = GetComponent<AppleFace>();
+    }
     private void Start()
     {
-        camera = Camera.main;
-        initialPosition = transform.position;
+        originPosition = transform.position;
         simpleRigidbody.SetGravity(false);
         animator = GetComponent<Animator>();
     }
     private void Update()
     {
-        Vector2 mousePosition = camera.ScreenToWorldPoint(Input.mousePosition);
-        Vector2 target = initialPosition;
+        Vector2 mousePosition = CursorLocator.instance.MousePosition;
+        Vector2 target = originPosition;
         if (grabbed)
         {
-            float distance = Vector2.Distance(mousePosition, initialPosition);
-
-            //If the user is pulling the apple more than the attach radius...
-            if (attachedToTree && distance > attachRadius)
+            if (attachedToTree)
             {
-                //The apple is gonna be placed at the increasing limit of the radius
-                float extraRadius = (treeResistanceTimer / resistanceTime) * resistanceMagnitude;
-                target = initialPosition + ((mousePosition - initialPosition).normalized) * ( attachRadius + extraRadius);
-                treeResistanceTimer += Time.deltaTime;
-                if (treeResistanceTimer > resistanceTime)
-                {
-                    attachedToTree = false;
-                    AppleUnattachedEvent?.Invoke(this);
-                }
-
-                //SFX depending on pulling time
-                int pitch = Mathf.FloorToInt((treeResistanceTimer / resistanceTime) * 10f);
+                float distance = Vector2.Distance(mousePosition, originPosition);
+                int pitch = Mathf.FloorToInt((distance / maxPullRadius) * 10f);
                 if (pitch != previousPitch)
                 {
                     previousPitch = pitch;
                     AudioManager.instance.PlayPitchedSfx(SFXNames.TreeResistance, 1f + (float)pitch * 0.1f);
                 }
+                //If the user is pulling the apple more than the attach radius...
+                if (distance > attachRadius)
+                {
+                    attachedToTree = false;
+                    AppleUnattachedEvent?.Invoke(this);
+                }
             }
             else
             {
-                //Apple spring follows the mouse position
-                target = mousePosition;
+                //Adds angular velocity depending the cursor direction
+                Vector2 dir = lastFramePosition - (Vector2)transform.position;
+                float angularVelocity = dir.x > 0 ? 1 : -1;
+                angularVelocity *= dir.magnitude * angularAcceleration;
+                simpleRigidbody.AddAngularVelocity(angularVelocity);
             }
-
-            //Adds angular velocity depending the cursor direction
-            Vector2 dir = lastFramePosition - (Vector2)transform.position;
-            float angularVelocity = dir.x > 0 ? 1 : -1;
-            angularVelocity *= dir.magnitude * angularAcceleration;
-            simpleRigidbody.AddAngularVelocity(angularVelocity);
+            //Apple spring follows the mouse position
+            target = mousePosition;
         }
         //Sets the spring target
         spring.SetTarget(target);
         lastFramePosition = transform.position;
+
+        if (face)
+        {
+            face.SetMousePosition(mousePosition);
+        }
     }
     /// <summary>
     /// Set the apple goal to reach
@@ -154,5 +159,14 @@ public class Apple : MonoBehaviour
     public void DissapearApple()
     {
         animator.SetTrigger("Dissapear");
+    }
+
+    /// <summary>
+    /// Sets new apple origin
+    /// </summary>
+    /// <param name="newOrigin"></param>
+    public void SetOriginPoint(Vector2 newOrigin)
+    {
+        this.originPosition = newOrigin;
     }
 }

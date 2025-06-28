@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class TreeBehaviour : MonoBehaviour
 {
     [Header("Apple")]
-    [SerializeField] private Apple apple;
     [SerializeField] private GameObject applePrefab;
     [Header("Tree top")]
     [SerializeField] private GameObject treeTop;
@@ -16,12 +16,15 @@ public class TreeBehaviour : MonoBehaviour
     [Header("Leaves")]
     [SerializeField] private GameObject leavesExplosion;
 
+    private Apple currentApple;
     private TreeConstructor treeConstructor;
     private Spring topSpring;
     private Vector2 treeTopInitialPosition;
     private Vector2 treeTopTarget;
     private Vector2 appleInitialPosition;
     private Animator goalAnimator;
+    private IEnumerator spawnTask;
+    private Dictionary<Transform, Apple> apples = new Dictionary<Transform, Apple>();
 
     private void OnDrawGizmosSelected()
     {
@@ -34,6 +37,7 @@ public class TreeBehaviour : MonoBehaviour
 
     private void Awake()
     {
+        spawnTask = SpawnMissingApples();
         treeConstructor = GetComponent<TreeConstructor>();
         treeConstructor.TreeConstructedEvent += OnTreeConstructed;
     }
@@ -45,10 +49,10 @@ public class TreeBehaviour : MonoBehaviour
 
     private void Update()
     {
-        if (apple && apple.AttachedToTree)
+        if (currentApple && currentApple.AttachedToTree)
         {
             //Tree top follows the apple which is currently attached
-            Vector2 deltaDistance = (Vector2)apple.transform.position - appleInitialPosition;
+            Vector2 deltaDistance = (Vector2)currentApple.transform.position - appleInitialPosition;
             if(deltaDistance.magnitude > dragRadius)
             {
                 deltaDistance = deltaDistance.normalized * dragRadius;
@@ -60,6 +64,10 @@ public class TreeBehaviour : MonoBehaviour
             //Sets the tree top spring target
             topSpring.SetTarget(treeTopTarget);
         }
+        foreach(var apple in apples)
+        {
+            apple.Value.SetOriginPoint(apple.Key.position);
+        }
     }
 
     /// <summary>
@@ -67,7 +75,7 @@ public class TreeBehaviour : MonoBehaviour
     /// </summary>
     private void OnTreeConstructed()
     {
-        SpawnApple();
+        StartCoroutine(spawnTask);
         treeTop = treeConstructor.TreeTop;
         treeTopInitialPosition = treeTop.transform.position;
         treeTopTarget = treeTopInitialPosition;
@@ -82,15 +90,15 @@ public class TreeBehaviour : MonoBehaviour
     /// <summary>
     /// Spawns and apple,set its goal and listeners to apple events
     /// </summary>
-    private void SpawnApple()
+    private Apple SpawnApple(Transform location)
     {
-        apple = Instantiate(applePrefab).GetComponent<Apple>();
-        apple.transform.position = spawnLocations[Random.Range(0, spawnLocations.Length - 1)].position;
-        appleInitialPosition = apple.transform.position;
+        var apple = Instantiate(applePrefab).GetComponent<Apple>();
+        apple.transform.position = location.position;
         apple.SetGoal(goal);
         apple.AppleGrabbedEvent += OnAppleGrabbed;
         apple.AppleReleasedEvent += OnAppleReleased;
         apple.AppleUnattachedEvent += OnAppleUnattached;
+        return apple;
     }
 
     /// <summary>
@@ -99,16 +107,28 @@ public class TreeBehaviour : MonoBehaviour
     /// <param name="apple"></param>
     private void OnAppleUnattached(Apple apple)
     {
-        if(this.apple == apple)
+        if(this.currentApple == apple)
         {
-            this.apple = null;
+            this.currentApple = null;
         }
         treeTopTarget = treeTopInitialPosition;
         var explosion = Instantiate(leavesExplosion);
         explosion.transform.position = apple.transform.position;
         goalAnimator.SetBool("isShowed", true);
         AudioManager.instance.PlaySFX(SFXNames.TreeShake);
-        Invoke(nameof(SpawnApple), 2f);
+        foreach (var treeApple in apples.ToList())
+        {
+            if (apple == treeApple.Value)
+            {
+                apples.Remove(treeApple.Key);
+            }
+        }
+        if (spawnTask != null)
+        {
+            StopCoroutine(spawnTask);
+            spawnTask = SpawnMissingApples();
+            StartCoroutine(spawnTask);
+        }
     }
 
     /// <summary>
@@ -118,6 +138,7 @@ public class TreeBehaviour : MonoBehaviour
     /// <param name="apple"></param>
     private void OnAppleReleased(Apple apple)
     {
+        currentApple = null;
         if (!apple.AttachedToTree)
         {
             treeTopTarget = treeTopInitialPosition;
@@ -131,6 +152,7 @@ public class TreeBehaviour : MonoBehaviour
     /// <param name="apple"></param>
     private void OnAppleGrabbed(Apple apple)
     {
+        currentApple = apple;
         if (apple.AttachedToTree)
         {
             appleInitialPosition = apple.transform.position;
@@ -138,6 +160,36 @@ public class TreeBehaviour : MonoBehaviour
         else
         {
             goalAnimator.SetBool("isShowed", true);
+        }
+    }
+    /// <summary>
+    /// Coroutine that spawn apples on missing spawn points.
+    /// The apples are stored on a dictionary based on which point it was spawned
+    /// </summary>
+    private IEnumerator SpawnMissingApples()
+    {
+        if (apples.Count == spawnLocations.Length)
+            yield break;
+        yield return new WaitForSeconds(0.5f);
+        Transform selectedSpawnPoint = null;
+        if(apples.Count> 0)
+        {
+            //Finds which are the missing spawn points on the tree
+            List<Transform> occupiedSpawnPoints = apples.Keys.ToList();
+            List<Transform> missingSpawnPoints = spawnLocations.Except(occupiedSpawnPoints).ToList();
+            selectedSpawnPoint = missingSpawnPoints[Random.Range(0, missingSpawnPoints.Count)];
+        }
+        else
+        {
+            selectedSpawnPoint = spawnLocations[Random.Range(0,spawnLocations.Length)];
+        }
+        Apple apple = SpawnApple(selectedSpawnPoint);
+        apples[selectedSpawnPoint] = apple;
+        if(apples.Count < spawnLocations.Length)
+        {
+            yield return new WaitForSeconds(1f);
+            spawnTask = SpawnMissingApples();
+            StartCoroutine(spawnTask);
         }
     }
 }
